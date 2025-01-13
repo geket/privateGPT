@@ -1,0 +1,87 @@
+# PrivateGPT Installation Write-up for Debian Linux
+# Github geket
+
+# Clone the PrivateGPT repository
+git clone https://github.com/zylon-ai/private-gpt
+cd private-gpt
+
+# Install pyenv
+curl https://pyenv.run | bash
+
+# Add pyenv to the load path.
+## WARNING: seems you still have not added 'pyenv' to the load path.
+## Load pyenv automatically by appending
+## the following to
+## ~/.bash_profile if it exists, otherwise ~/.profile (for login shells)
+## and ~/.bashrc (for interactive shells) :
+
+export PYENV_ROOT="$HOME/.pyenv"
+[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init - bash)"
+
+## Restart your shell for the changes to take effect.
+## Load pyenv-virtualenv automatically by adding
+## the following to ~/.bashrc:
+
+eval "$(pyenv virtualenv-init -)"
+
+## Restart the shell, then run:
+pyenv install 3.11
+
+## If it still doesn't recognize the command then you may have to run it is a root.
+## Howver, it is best practice security wise to try adding the loads to ~/.bash_profile or ~/.profile.
+## Ensure you rad ~/.bash_profile or ~/.profile in a non root shell, as your user.
+sudo pyenv install 3.11
+
+## If pyenv installation fails, OpenSSL may be required
+## ERROR: The Python ssl extension was not compiled. Missing the OpenSSL lib?
+## Please consult to the Wiki page to fix the problem.
+## https://github.com/pyenv/pyenv/wiki/Common-build-problems
+## BUILD FAILED (Debian * using python-build *)
+## Inspect or clean up the working tree at /tmp/python-build.*.*
+## Results logged to /tmp/python-build.*.*.log
+
+sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev \
+libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \
+xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git
+
+# Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Run the ollama service
+ollama serve
+
+# It is normal for ollama to not work directly after installing, in order to fix this restart the service.
+# For example: Error: listen tcp 127.0.0.1:11434: bind: address already in use
+systemctl stop ollama
+ollama serve
+
+# Now, you will have to pull the models you require for your use case
+# I will be using the models specified in the documentation for now
+ollama pull llama3.1
+ollama pull nomic-embed-text
+
+# Now install the poetry components for PrivateGPT
+poetry install --extras "ui llms-ollama embeddings-ollama vector-stores-qdrant"
+
+# Now you can try to run PrivateGPT
+PGPT_PROFILES=ollama make run
+
+## You may notice that it will tell you that uvicorn is missing, I tried installing it with 'apt install gunicorn'
+## But I realized this would not work for environmentalized Python, you would have to install it with Poetry.
+## First, you must make sure that you have dbus installed, otherwise you will see
+## g-exec-error-quark: Failed to execute child process “dbus-launch” (No such file or directory) (8)
+sudo apt install dbus-x11
+
+## Now you can try to install uvicorn
+## If it all goes smoothly, it should install something around ~111 poetry packages.
+poetry add fastapi uvicorn
+
+# Finally, try to run PrivateGPT again, it should work after install dbus and uvicorn:
+PGPT_PROFILES=ollama make run
+
+## If all goes well, you should see "Uvicorn running on http://0.0.0.0:8001"
+## The IP address may be different depending on your network configuration.
+## You can now access your running PrivateGPT LLM by accessing that IP address in a web browser.
+
+# Enjoy your PrivateGPT!
